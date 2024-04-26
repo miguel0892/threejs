@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { OrbitControls} from 'three/examples/jsm/Addons.js';
 import * as dat from 'dat.gui';
 
-// import nebula from '../img/nebula.webp';
-// import stars from '../img/stars.jpg';
+import nebula from '../img/nebula.jpg';
+import stars from '../img/stars.jpg';
 // import skystars from '../img/sky-stars.webp';
 // import { textureLoad } from 'three/examples/jsm/nodes/Nodes.js';
 
@@ -91,16 +91,49 @@ scene.add(sLightHelper);
 
 
 
+// scene.fog = new THREE.Fog(0xFFFFFF, 0, 200);
+
+scene.fog = new THREE.FogExp2(0xFFFFFF, 0.01);
+// renderer.setClearColor(0xFFEA00);
+
+const textureLoader = new THREE.TextureLoader();
+// scene.background = textureLoader.load(stars);
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+scene.background = cubeTextureLoader.load([
+    nebula,
+    nebula,
+    stars,
+    stars,
+    stars,
+    stars,
+]);
 
 
+const box2Geometry = new THREE.BoxGeometry(4, 4, 4);
+const box2Material = new THREE.MeshStandardMaterial({
+    // color: 0x00ff00,
+    // map: textureLoader.load(nebula)
+});
 
+const box2MultiMaterial = [
+    new THREE.MeshBasicMaterial({map: textureLoader.load(stars)}),
+    new THREE.MeshBasicMaterial({map: textureLoader.load(stars)}),
+    new THREE.MeshBasicMaterial({map: textureLoader.load(nebula)}),
+    new THREE.MeshBasicMaterial({map: textureLoader.load(stars)}),
+    new THREE.MeshBasicMaterial({map: textureLoader.load(nebula)}),
+    new THREE.MeshBasicMaterial({map: textureLoader.load(stars)}),
+];
 
+const box2 = new THREE.Mesh(box2Geometry, box2MultiMaterial);
+scene.add(box2);
+box2.position.set(0, 15, 10);
+box2.material.map = textureLoader.load(nebula);
 const gui = new dat.GUI();
 const options = {
     sphereColor: '#fff000',
     wireframe:false,
     speed:0.01,
-    angle:0.02,
+    angle:0.2,
     focus:0,
     intensity:15000,
     penumbra: 0.5
@@ -116,11 +149,25 @@ gui.add(options, 'wireframe').onChange(function(e){
 gui.add(options,'speed',0,0.1)
 let step = 0;
 
+const mousePosition = new THREE.Vector2();
+
+window.addEventListener('mouseover', function(e){
+    mousePosition.x = (e.clientX /  window.innerWidth) * 2 - 1;
+    mousePosition.y =  - (e.clientY /  window.innerHeight) * 2 + 1;
+});
+
+
+
 gui.add(options,'angle',0,1);
 gui.add(options, "intensity",0, 30000);
 gui.add(options, "focus", 0,15000);
 gui.add(options, "penumbra", 0, 1);
 
+
+const rayCaster = new THREE.Raycaster();
+const sphereId = sphere.id; 
+box2.name = 'theBox';
+box2.castShadow = true;
 
 
 function animate(time){
@@ -136,7 +183,22 @@ function animate(time){
     sLightHelper.update();
 
     
-    
+    rayCaster.setFromCamera(mousePosition, camera);
+    const intersects = rayCaster.intersectObjects(scene.children);
+
+    for(let i = 0; i < intersects.length; i++){
+        if(intersects[i].object.id === sphereId){
+            console.log(intersects[i].object.id)
+            
+            intersects[i].object.material.color.set(0xFF0000)
+        }
+
+        if(intersects[i].object.name === 'theBox'){
+            console.log(intersects[i].object.id)
+            intersects[i].object.rotation.x = time/1000;
+            intersects[i].object.rotation.y = time/1000;
+        }
+    }
 
     renderer.render(scene,camera);
 }
